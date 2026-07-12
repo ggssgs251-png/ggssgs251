@@ -1,19 +1,20 @@
 """RAG engine: document ingestion, chunking, embedding, and retrieval.
 
-Uses ChromaDB (persistent, file-based) for vector storage and Ollama
-for generating embeddings locally and for-free.
+Uses a lightweight file-based vector store (numpy + pickle) instead of ChromaDB
+to save disk space in constrained environments. Ollama generates embeddings.
+
 Monitored at the 'rag' stage.
 """
 
 import hashlib
+import pickle
 import re
 from pathlib import Path
 from time import time
 from typing import Any
 
-import chromadb
 import httpx
-from chromadb.config import Settings
+import numpy as np
 
 from backend.config import (
     CHROMA_DIR,
@@ -30,29 +31,36 @@ from backend.logging_config import get_stage_logger
 logger = get_stage_logger("rag")
 
 # ──────────────────────────────────────────────
-# ChromaDB Client (persistent singleton)
+# Lightweight Vector Store (numpy + pickle)
 # ──────────────────────────────────────────────
 
-_client: chromadb.PersistentClient | None = None
+DATA_FILE = CHROMA_DIR / "vectors.pkl"
 
 
-def _get_client() -> chromadb.PersistentClient:
-    global _client
-    if _client is None:
-        _client = chromadb.PersistentClient(
-            path=str(CHROMA_DIR),
-            settings=Settings(anonymized_telemetry=False),
-        )
-    return _client
+def _load_data() -> dict[str, Any]:
+    """Load vector store from disk. Returns empty dict if no data exists."""
+    if DATA_FILE.exists():
+        try:
+            with open(DATA_FILE, "rb") as f:
+                return pickle.load(f)
+        except Exception as e:
+            logger.warning("Failed to load vector store: %s. Starting fresh.", e)
+    return {"ids": [], "documents": [], "embeddings": [], "metadatas": []}
 
 
-def _get_or_create_collection(collection_name: str = "documents"):
-    """Get or create a ChromaDB collection."""
-    client = _get_client()
-    try:
-        return client.get_collection(collection_name)
-    except ValueError:
-        return client.create_collection(collection_name)
+def _save_data(data: dict[str, Any]) -> None:
+    """Save vector store to disk."""
+    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(DATA_FILE, "wb") as f:
+        pickle.dump(data, f)
+
+
+def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    """Compute cosine similarity between two vectors."""
+    dot = float(np.dot(a, b))
+    norm_a = float(np.linalg.norm(a)) or 1.0
+    norm_b = float(np.linalg.norm(b)) or 1.0
+    return dot / (norm_a * norm_b)
 
 
 # ──────────────────────────────────────────────
@@ -90,6 +98,7 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
 # ──────────────────────────────────────────────
 # Document chunking
 # ──────────────────────────────────────────────
+
 
 def chunk_text(text: str, filename: str) -> list[dict[str, Any]]:
     """Split text into overlapping chunks with metadata."""
@@ -154,6 +163,7 @@ def extract_text_from_file(filepath: Path) -> str:
 # Public API
 # ──────────────────────────────────────────────
 
+
 def index_document(filename: str, content: bytes | str) -> dict[str, Any]:
     """Ingest a document: save, extract, chunk, embed, and index."""
     t0 = time()
@@ -183,14 +193,13 @@ def index_document(filename: str, content: bytes | str) -> dict[str, Any]:
     # Embed
     embeddings = _embed_texts(texts)
 
-    # Store in ChromaDB
-    collection = _get_or_create_collection()
-    collection.add(
-        ids=ids,
-        documents=texts,
-        embeddings=embeddings,
-        metadatas=metadatas,
-    )
+    # Store in lightweight vector store
+    data = _load_data()
+    data["ids"].extend(ids)
+    data["documents"].extend(texts)
+    data["embeddings"].extend(embeddings)
+    data["metadatas"].extend(metadatas)
+    _save_data(data)
 
     elapsed = (time() - t0) * 1000
     logger.info(
@@ -203,37 +212,35 @@ def index_document(filename: str, content: bytes | str) -> dict[str, Any]:
 
 
 def query_documents(query: str, top_k: int = DEFAULT_RAG_RESULTS) -> list[dict[str, Any]]:
-    """Retrieve relevant document chunks for a query."""
-    collection = _get_or_create_collection()
-
-    # Count existing docs — if empty, return empty
-    if collection.count() == 0:
+    """Retrieve relevant document chunks for a query using cosine similarity."""
+    data = _load_data()
+    if not data["ids"]:
         return []
 
     # Embed the query
     query_embedding = _embed_texts([query])[0]
+    query_vec = np.array(query_embedding, dtype=np.float32)
 
-    # Search
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=min(top_k, collection.count()),
-        include=["documents", "metadatas", "distances"],
-    )
-
-    retrieved = []
-    if results["ids"] and results["ids"][0]:
-        for i, _doc_id in enumerate(results["ids"][0]):
-            distance = results["distances"][0][i] if results.get("distances") else 0.0
-            score = 1.0 - distance  # convert distance to similarity score
-            if score >= RAG_MIN_SCORE:
-                retrieved.append({
-                    "content": results["documents"][0][i],
-                    "source": (results["metadatas"][0][i] or {}).get("source", "unknown"),
-                    "score": round(score, 4),
-                })
+    # Compute cosine similarity against all stored embeddings
+    scores: list[tuple[float, int]] = []
+    for idx, emb in enumerate(data["embeddings"]):
+        emb_vec = np.array(emb, dtype=np.float32)
+        score = _cosine_similarity(query_vec, emb_vec)
+        scores.append((score, idx))
 
     # Sort by score descending
-    retrieved.sort(key=lambda r: r["score"], reverse=True)
+    scores.sort(key=lambda x: x[0], reverse=True)
+
+    # Return top-k results above threshold
+    retrieved = []
+    for score, idx in scores[:top_k]:
+        if score >= RAG_MIN_SCORE:
+            retrieved.append({
+                "content": data["documents"][idx],
+                "source": (data["metadatas"][idx] or {}).get("source", "unknown"),
+                "score": round(score, 4),
+            })
+
     return retrieved
 
 
@@ -253,13 +260,12 @@ def build_rag_context(results: list[dict[str, Any]]) -> str:
 
 def list_indexed_documents() -> list[dict[str, Any]]:
     """List all unique source documents in the index."""
-    collection = _get_or_create_collection()
-    if collection.count() == 0:
+    data = _load_data()
+    if not data["ids"]:
         return []
 
-    results = collection.get(include=["metadatas"])
     sources = set()
-    for meta in results.get("metadatas", []) or []:
+    for meta in data.get("metadatas", []):
         if meta and meta.get("source"):
             sources.add(meta["source"])
 
@@ -268,17 +274,28 @@ def list_indexed_documents() -> list[dict[str, Any]]:
 
 def delete_document(filename: str) -> bool:
     """Delete all chunks associated with a document from the index."""
-    collection = _get_or_create_collection()
-    if collection.count() == 0:
+    data = _load_data()
+    if not data["ids"]:
         return False
 
-    results = collection.get(
-        where={"source": filename},
-        include=[],
-    )
-    if results["ids"]:
-        collection.delete(ids=results["ids"])
-        logger.info(f"Deleted {len(results['ids'])} chunks for '{filename}'")
+    # Find indices to remove
+    indices_to_remove = [
+        i for i, meta in enumerate(data["metadatas"])
+        if meta and meta.get("source") == filename
+    ]
+
+    if not indices_to_remove:
+        return False
+
+    # Remove in reverse order to preserve indices
+    for i in reversed(indices_to_remove):
+        data["ids"].pop(i)
+        data["documents"].pop(i)
+        data["embeddings"].pop(i)
+        data["metadatas"].pop(i)
+
+    _save_data(data)
+    logger.info(f"Deleted {len(indices_to_remove)} chunks for '{filename}'")
 
     # Also remove the file from uploads
     filepath = UPLOAD_DIR / filename

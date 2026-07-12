@@ -128,7 +128,10 @@ source .venv/bin/activate
 
 # Install/update dependencies
 echo -e "  📦 Installing Python dependencies..."
-pip install -q -e . 2>/dev/null || pip install -q \
+
+# Install core deps explicitly (pyproject.toml install can fail on sentence-transformers)
+pip install --quiet --upgrade pip setuptools wheel 2>&1 | tail -1
+pip install --quiet \
     strands-agents>=0.1.0 \
     ollama>=0.6.0 \
     fastapi>=0.110.0 \
@@ -140,9 +143,10 @@ pip install -q -e . 2>/dev/null || pip install -q \
     bcrypt>=4.1.0 \
     pypdf2>=3.0.0 \
     python-docx>=1.1.0 \
+    pydantic>=2.0.0 \
     httpx>=0.27.0 \
     jinja2>=3.1.0 \
-    aiofiles>=24.1.0 2>&1 | tail -1
+    aiofiles>=24.1.0 2>&1 | tail -3
 
 echo -e "  ✅ Dependencies installed"
 

@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader
 
 from backend.auth import router as auth_router
 from backend.config import CORS_ORIGINS, DATA_DIR, UPLOAD_DIR
@@ -26,7 +27,14 @@ logger = get_stage_logger("system")
 
 # ── Setup templates and static files ──
 BASE_DIR = Path(__file__).resolve().parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+# Create a Jinja2 environment without auto-reload caching issues
+jinja_env = Environment(
+    loader=FileSystemLoader(str(BASE_DIR / "templates")),
+    auto_reload=False,  # disable cache key issues in constrained envs
+    enable_async=True,
+)
+templates = Jinja2Templates(env=jinja_env)
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
 
