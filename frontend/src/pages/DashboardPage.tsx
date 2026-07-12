@@ -269,7 +269,7 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y">
-                {docs.documents.map((doc) => (
+                {docs.documents.map((doc: { filename: string }) => (
                   <div
                     key={doc.filename}
                     className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors"

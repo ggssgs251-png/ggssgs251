@@ -116,7 +116,7 @@ export function ChatPage() {
         setRagResults(
           `Found ${res.sources.length} relevant passages:\n\n${res.sources
             .map(
-              (s, i) =>
+              (s: { source: string; score: number; content: string }, i: number) =>
                 `[${i + 1}] From: ${s.source}\n   Relevance: ${(s.score * 100).toFixed(0)}%\n   ${s.content.slice(0, 300)}...`
             )
             .join("\n\n")}`
