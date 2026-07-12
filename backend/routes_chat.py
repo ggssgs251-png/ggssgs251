@@ -2,9 +2,10 @@
 
 All incoming messages are first inspected by the Guardrail Agent before
 being forwarded to the Swarm.
+Logs at the 'chat' and 'swarm' stages for monitoring.
 """
 
-import logging
+from time import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,12 +13,14 @@ from strands.models.ollama import OllamaModel
 
 from backend.auth import get_current_user
 from backend.guardrails.checker import get_checker
+from backend.logging_config import get_stage_logger
 from backend.models import User
 from backend.rag_engine import build_rag_context, query_documents
 from backend.schemas import ChatRequest, ChatResponse
 from src.orchestrator import create_swarm, run_swarm
 
-logger = logging.getLogger(__name__)
+logger = get_stage_logger("chat")
+swarm_logger = get_stage_logger("swarm")
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -53,18 +56,20 @@ def send_message(
     """
     try:
         message = body.message
-        routing_path = []
-
-        # ── 0. Guardrail check (gatekeeper) ──
+        routing_path = []        # ── 0. Guardrail check (gatekeeper) ──
+        t0 = time()
         guardrail = get_checker()
         gr_result = guardrail.check(message)
+        guardrail_time = (time() - t0) * 1000
 
         if not gr_result.passed:
-            logger.info(
-                "GUARDRAIL BLOCKED | user='%s' | score=%d | reason=%s",
+            logger.warning(
+                "Message blocked | user=%s | score=%d/%d | categories=%s | dur=%.0fms",
                 current_user.username,
                 gr_result.score,
-                gr_result.reason[:100],
+                gr_result.violations[0]["weight"] if gr_result.violations else 10,
+                [v["category"] for v in gr_result.violations],
+                guardrail_time,
             )
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -76,6 +81,13 @@ def send_message(
                         {"category": v["category"]} for v in gr_result.violations
                     ],
                 },
+            )
+        else:
+            logger.debug(
+                "Guardrail passed | user=%s | score=%d | dur=%.0fms",
+                current_user.username,
+                gr_result.score,
+                guardrail_time,
             )
 
         # 1. Retrieve RAG context if documents exist
@@ -114,12 +126,23 @@ def send_message(
         elif hasattr(result, "results") and result.results:
             routing_path = list(result.results.keys())
 
+        elapsed = (time() - t0) * 1000
         logger.info(
-            f"User '{current_user.username}' → Chat | path: {' → '.join(routing_path)}"
+            "Chat completed | user=%s | agent=%s | path=%s | dur=%.0fms",
+            current_user.username,
+            final_agent,
+            " → ".join(routing_path) if routing_path else "-",
+            elapsed,
         )
 
-        # Determine which agent handled it
-        final_agent = routing_path[-1] if routing_path else "orchestrator"
+        # Also log to swarm stage for detailed path tracking
+        if routing_path:
+            swarm_logger.info(
+                "Agent routing | user=%s | path=%s | dur=%.0fms",
+                current_user.username,
+                " → ".join(routing_path),
+                elapsed,
+            )
 
         return ChatResponse(
             reply=reply,
@@ -127,8 +150,10 @@ def send_message(
             routing_path=routing_path,
         )
 
+    except HTTPException:
+        raise  # Re-raise guardrail HTTP exceptions as-is
     except Exception as e:
-        logger.exception("Chat error")
+        logger.exception("Chat error: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Agent processing error: {str(e)}",
@@ -140,5 +165,5 @@ def reset_conversation(current_user: User = Depends(get_current_user)):
     """Reset the conversation by clearing the cached swarm."""
     global _swarm_cache
     _swarm_cache = {}
-    logger.info(f"User '{current_user.username}' reset the conversation")
+    logger.info("Conversation reset | user=%s", current_user.username)
     return {"message": "Conversation reset successfully"}

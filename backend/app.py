@@ -2,6 +2,9 @@
 
 Run with: uvicorn backend.app:app --reload
 Or:        python -m backend.app
+
+Uses structured stage-level logging for monitoring each pipeline stage.
+Stages: auth, guardrail, rag, chat, swarm, api.
 """
 
 import logging
@@ -12,12 +15,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import CORS_ORIGINS, DATA_DIR, UPLOAD_DIR
 from backend.database import init_db
+from backend.logging_config import get_stage_logger, init_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
+# Initialize structured logging
+init_logging()
+
+logger = get_stage_logger("system")
 
 
 @asynccontextmanager

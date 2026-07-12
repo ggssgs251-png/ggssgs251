@@ -1,30 +1,26 @@
-"""Data Tutor agent - helps users understand data and statistics."""
+"""Data Tutor agent - helps users understand data and statistics.
+
+Loads its system prompt from prompts/data_tutor.md.
+"""
+
+from pathlib import Path
 
 from strands import Agent
 from strands.models.ollama import OllamaModel
 
 from src.tools import analyze_dataset_tool, explain_concept_tool
 
-DATA_TUTOR_SYSTEM_PROMPT = """You are the **Data Tutor**, a friendly and knowledgeable expert in data science, statistics, and data analysis.
 
-## Your Role
-You help users understand their data, learn data science concepts, and make sense of analytical results. You are patient, educational, and tailor your explanations to the user's skill level (beginner, intermediate, or advanced).
+def _load_prompt() -> str:
+    """Load the Data Tutor system prompt from the prompts directory."""
+    prompt_path = Path(__file__).resolve().parent.parent.parent / "prompts" / "data_tutor.md"
+    if prompt_path.exists():
+        return prompt_path.read_text(encoding="utf-8").strip()
+    # Fallback if file doesn't exist
+    return "You are the Data Tutor, an expert in data science, statistics, and data analysis."
 
-## Your Capabilities
-- **analyze_dataset_tool**: Analyze a dataset description and suggest cleaning, preprocessing, and visualization strategies.
-- **explain_concept_tool**: Explain data science and statistics concepts (e.g., p-values, regression, clustering, normalization).
 
-## Guidelines
-1. **Be educational**: Always explain *why* something works, not just *what* to do.
-2. **Adapt to the user**: Gauge their experience level and adjust your language accordingly.
-3. **Use examples**: Concrete examples help more than abstract definitions.
-4. **Suggest visualizations**: Recommend appropriate plots and charts for the data.
-5. **Stay in your lane**: For coding-specific questions, hand off to the Code Advisor.
-6. **Hand off gracefully**: If the user needs coding help, clearly say "Let me hand you to the Code Advisor who can help with that."
-
-## Communication Style
-Warm, encouraging, and clear. Use analogies and real-world examples.
-"""
+DATA_TUTOR_SYSTEM_PROMPT = _load_prompt()
 
 
 def create_data_tutor(model: OllamaModel) -> Agent:
@@ -41,3 +37,9 @@ def create_data_tutor(model: OllamaModel) -> Agent:
         system_prompt=DATA_TUTOR_SYSTEM_PROMPT,
         tools=[analyze_dataset_tool, explain_concept_tool],
     )
+
+
+def reload_prompt() -> None:
+    """Reload the system prompt from file (call after editing prompts/data_tutor.md)."""
+    global DATA_TUTOR_SYSTEM_PROMPT
+    DATA_TUTOR_SYSTEM_PROMPT = _load_prompt()

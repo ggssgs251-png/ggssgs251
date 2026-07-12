@@ -2,12 +2,13 @@
 
 Uses ChromaDB (persistent, file-based) for vector storage and Ollama
 for generating embeddings locally and for-free.
+Monitored at the 'rag' stage.
 """
 
 import hashlib
-import logging
 import re
 from pathlib import Path
+from time import time
 from typing import Any
 
 import chromadb
@@ -23,8 +24,9 @@ from backend.config import (
     RAG_MIN_SCORE,
     UPLOAD_DIR,
 )
+from backend.logging_config import get_stage_logger
 
-logger = logging.getLogger(__name__)
+logger = get_stage_logger("rag")
 
 # ──────────────────────────────────────────────
 # ChromaDB Client (persistent singleton)
@@ -156,6 +158,7 @@ def extract_text_from_file(filepath: Path) -> str:
 
 def index_document(filename: str, content: bytes | str) -> dict[str, Any]:
     """Ingest a document: save, extract, chunk, embed, and index."""
+    t0 = time()
     # Save to uploads
     safe_name = Path(filename).name
     filepath = UPLOAD_DIR / safe_name
@@ -191,7 +194,13 @@ def index_document(filename: str, content: bytes | str) -> dict[str, Any]:
         metadatas=metadatas,
     )
 
-    logger.info(f"Indexed {safe_name}: {len(chunks)} chunks")
+    elapsed = (time() - t0) * 1000
+    logger.info(
+        "Document indexed | file=%s | chunks=%d | dur=%.0fms",
+        safe_name,
+        len(chunks),
+        elapsed,
+    )
     return {"document_id": safe_name, "chunks": len(chunks)}
 
 

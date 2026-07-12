@@ -1,15 +1,16 @@
 """RAG API routes — document upload, query, listing, and deletion.
 
 All text-based inputs (queries, filenames) are inspected by the Guardrail
-Agent before processing.
+Agent before processing. Monitored at the 'rag' stage.
 """
 
-import logging
+from time import time
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from backend.auth import get_current_user
 from backend.guardrails.checker import get_checker
+from backend.logging_config import get_stage_logger
 from backend.models import User
 from backend.rag_engine import (
     build_rag_context,
@@ -20,7 +21,7 @@ from backend.rag_engine import (
 )
 from backend.schemas import ChunkResult, QueryRequest, QueryResponse, UploadResponse
 
-logger = logging.getLogger(__name__)
+logger = get_stage_logger("rag")
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -69,7 +70,12 @@ async def upload_document(
             message=f"Document uploaded but {result['error']}",
         )
 
-    logger.info(f"User '{current_user.username}' uploaded '{file.filename}' ({result['chunks']} chunks)")
+    logger.info(
+        "Document uploaded | user=%s | file=%s | chunks=%d",
+        current_user.username,
+        file.filename,
+        result.get("chunks", 0),
+    )
     return UploadResponse(
         filename=file.filename,
         document_id=result["document_id"],
@@ -120,7 +126,12 @@ def query_knowledge_base(
     ]
 
     # The context string gets sent along; the frontend can show it or pass to the chat
-    logger.info(f"User '{current_user.username}' queried KB: '{body.query[:60]}...' ({len(results)} results)")
+    logger.info(
+        "KB queried | user=%s | query=%.60s | results=%d",
+        current_user.username,
+        body.query,
+        len(results),
+    )
     return QueryResponse(
         answer=context,
         sources=sources,

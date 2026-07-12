@@ -1,6 +1,10 @@
-"""Authentication system: JWT tokens, password hashing, FastAPI routes."""
+"""Authentication system: JWT tokens, password hashing, FastAPI routes.
+
+Monitored at the 'auth' stage.
+"""
 
 from datetime import datetime, timedelta, timezone
+from time import time
 
 import bcrypt
 import jwt
@@ -10,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from backend.config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 from backend.database import get_db
+from backend.logging_config import get_stage_logger
 from backend.models import User
 from backend.schemas import (
     LoginRequest,
@@ -17,6 +22,8 @@ from backend.schemas import (
     TokenResponse,
     UserResponse,
 )
+
+logger = get_stage_logger("auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
@@ -109,24 +116,39 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+    logger.info("User registered | user=%s | email=%s", body.username, body.email)
     return user
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate and return a JWT token."""
+    t0 = time()
     user = db.query(User).filter(User.username == body.username).first()
     if not user or not verify_password(body.password, user.hashed_password):
+        elapsed = (time() - t0) * 1000
+        logger.warning(
+            "Login failed | user=%s | dur=%.0fms",
+            body.username,
+            elapsed,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         )
 
     token = create_access_token({"sub": str(user.id), "username": user.username})
+    elapsed = (time() - t0) * 1000
+    logger.info(
+        "User logged in | user=%s | dur=%.0fms",
+        body.username,
+        elapsed,
+    )
     return TokenResponse(access_token=token)
 
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     """Get the current authenticated user's profile."""
+    logger.debug("Profile fetched | user=%s", current_user.username)
     return current_user

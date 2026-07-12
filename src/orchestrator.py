@@ -2,7 +2,12 @@
 
 Uses the Strands Swarm pattern to dynamically route user requests
 to the appropriate specialist agent (Data Tutor or Code Advisor).
+Loads the orchestrator system prompt from prompts/orchestrator.md.
 """
+
+import logging
+from pathlib import Path
+from time import time
 
 from strands import Agent
 from strands.models.ollama import OllamaModel
@@ -10,27 +15,19 @@ from strands.multiagent import Swarm, SwarmResult
 
 from src.agents import create_code_advisor, create_data_tutor
 
-ORCHESTRATOR_SYSTEM_PROMPT = """You are the **Orchestrator** — the intelligent router for a team of AI specialists.
+logger = logging.getLogger(__name__)
 
-## Your Team
-1. **Data Tutor** — Expert in data science, statistics, and data analysis.
-   Delegate: Data cleaning, visualization, statistical tests, ML concepts.
-2. **Code Advisor** — Expert in software engineering and programming.
-   Delegate: Code reviews, code explanations, debugging help, best practices.
 
-## Your Role
-- Listen to the user's request and determine which specialist can best help.
-- If the request is clearly data/statistics-related → hand off to **Data Tutor**.
-- If the request is clearly coding/programming-related → hand off to **Code Advisor**.
-- If the request spans both areas, start with the most relevant specialist.
-- If the request is general (greetings, simple questions), handle it yourself.
+def _load_prompt() -> str:
+    """Load the Orchestrator system prompt from the prompts directory."""
+    prompt_path = Path(__file__).resolve().parent.parent / "prompts" / "orchestrator.md"
+    if prompt_path.exists():
+        return prompt_path.read_text(encoding="utf-8").strip()
+    # Fallback if file doesn't exist
+    return "You are the Orchestrator, the intelligent router for a team of AI specialists."
 
-## Guidelines
-- Always explain which specialist you're routing to and why.
-- Be warm and helpful in your tone.
-- Never fabricate specialist capabilities — stay within the defined roles.
-- If a specialist can't fully resolve the request, they can hand back to you.
-"""
+
+ORCHESTRATOR_SYSTEM_PROMPT = _load_prompt()
 
 
 def create_swarm(model: OllamaModel) -> Swarm:
@@ -45,6 +42,8 @@ def create_swarm(model: OllamaModel) -> Swarm:
     Returns:
         A configured Swarm instance ready for invocation.
     """
+    t0 = time()
+
     # Create specialist agents
     data_tutor = create_data_tutor(model)
     code_advisor = create_code_advisor(model)
@@ -66,6 +65,11 @@ def create_swarm(model: OllamaModel) -> Swarm:
         id="ggssgs251-swarm",
     )
 
+    logger.info(
+        "Swarm created with 3 agents (orchestrator, data_tutor, code_advisor) in %.2fs",
+        time() - t0,
+    )
+
     return swarm
 
 
@@ -79,4 +83,16 @@ def run_swarm(swarm: Swarm, task: str) -> SwarmResult:
     Returns:
         The result of the swarm execution.
     """
-    return swarm(task)
+    logger.debug("Swarm invoked with task: %.80s...", task)
+    t0 = time()
+    result = swarm(task)
+    elapsed = time() - t0
+    logger.info("Swarm completed in %.2fs | status=%s", elapsed, result.status.value)
+    return result
+
+
+def reload_prompt() -> None:
+    """Reload the orchestrator system prompt from file."""
+    global ORCHESTRATOR_SYSTEM_PROMPT
+    ORCHESTRATOR_SYSTEM_PROMPT = _load_prompt()
+    logger.info("Orchestrator prompt reloaded from prompts/orchestrator.md")

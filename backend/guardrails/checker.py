@@ -1,8 +1,12 @@
-"""Guardrail checker — inspects messages against rules and returns pass/block results."""
+"""Guardrail checker — inspects messages against rules and returns pass/block results.
 
-import logging
+Monitored at the 'guardrail' stage.
+"""
+
 from dataclasses import dataclass, field
 from typing import Any
+
+from backend.logging_config import get_stage_logger
 
 from .rules import (
     BLOCK_THRESHOLD,
@@ -12,7 +16,7 @@ from .rules import (
     REGEX_PATTERNS,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_stage_logger("guardrail")
 
 
 @dataclass
@@ -123,8 +127,8 @@ class GuardrailChecker:
             reasons = [v["reason"] for v in unique_violations]
             primary_reason = reasons[0] if reasons else "Message was blocked by content filter."
 
-            logger.info(
-                "Guardrail BLOCKED | score=%d/%d | violations=%s",
+            logger.warning(
+                "BLOCKED | score=%d/%d | violations=%s",
                 total_score,
                 BLOCK_THRESHOLD,
                 [v["category"] for v in unique_violations],
