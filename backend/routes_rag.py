@@ -1,10 +1,15 @@
-"""RAG API routes — document upload, query, listing, and deletion."""
+"""RAG API routes — document upload, query, listing, and deletion.
+
+All text-based inputs (queries, filenames) are inspected by the Guardrail
+Agent before processing.
+"""
 
 import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from backend.auth import get_current_user
+from backend.guardrails.checker import get_checker
 from backend.models import User
 from backend.rag_engine import (
     build_rag_context,
@@ -78,7 +83,28 @@ def query_knowledge_base(
     body: QueryRequest,
     current_user: User = Depends(get_current_user),
 ):
-    """Query the knowledge base for relevant information."""
+    """Query the knowledge base for relevant information.
+
+    The query is first checked by the Guardrail Agent before execution.
+    """
+    # ── Guardrail check ──
+    guardrail = get_checker()
+    gr_result = guardrail.check(body.query)
+    if not gr_result.passed:
+        logger.info(
+            "GUARDRAIL BLOCKED (RAG query) | user='%s' | score=%d",
+            current_user.username,
+            gr_result.score,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "content_blocked",
+                "message": gr_result.reason,
+                "score": gr_result.score,
+            },
+        )
+
     results = query_documents(body.query, top_k=body.top_k)
 
     if not results:

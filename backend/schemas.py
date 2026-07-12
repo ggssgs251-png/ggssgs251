@@ -34,6 +34,25 @@ class UserResponse(BaseModel):
 
 # --- RAG Schemas ---
 
+# --- Guardrail Schemas ---
+
+class GuardrailViolation(BaseModel):
+    category: str
+    weight: int
+    matches: list[str]
+    reason: str
+
+
+class GuardrailResponse(BaseModel):
+    passed: bool
+    score: int
+    violations: list[GuardrailViolation]
+    reason: str = ""
+    allow_fallback: bool = False
+
+
+# --- RAG Schemas ---
+
 class UploadResponse(BaseModel):
     filename: str
     document_id: str

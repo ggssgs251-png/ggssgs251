@@ -1,4 +1,8 @@
-"""Chat API route — connects the frontend to the Strands Swarm with RAG context."""
+"""Chat API route — connects the frontend to the Strands Swarm with RAG context.
+
+All incoming messages are first inspected by the Guardrail Agent before
+being forwarded to the Swarm.
+"""
 
 import logging
 from typing import Any
@@ -7,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from strands.models.ollama import OllamaModel
 
 from backend.auth import get_current_user
+from backend.guardrails.checker import get_checker
 from backend.models import User
 from backend.rag_engine import build_rag_context, query_documents
 from backend.schemas import ChatRequest, ChatResponse
@@ -41,13 +46,37 @@ def send_message(
 ):
     """Send a message to the AI assistant.
 
-    The message is first augmented with relevant context from the knowledge base
-    (if any documents have been indexed), then routed through the orchestrator
-    Swarm to the most appropriate specialist agent.
+    The message goes through the Guardrail Agent FIRST:
+      1. Guardrail checks for PII, profanity, sensitive info
+      2. If blocked → returns 422 with violation details
+      3. If passed → retrieves RAG context, routes through Swarm
     """
     try:
         message = body.message
         routing_path = []
+
+        # ── 0. Guardrail check (gatekeeper) ──
+        guardrail = get_checker()
+        gr_result = guardrail.check(message)
+
+        if not gr_result.passed:
+            logger.info(
+                "GUARDRAIL BLOCKED | user='%s' | score=%d | reason=%s",
+                current_user.username,
+                gr_result.score,
+                gr_result.reason[:100],
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "content_blocked",
+                    "message": gr_result.reason,
+                    "score": gr_result.score,
+                    "violations": [
+                        {"category": v["category"]} for v in gr_result.violations
+                    ],
+                },
+            )
 
         # 1. Retrieve RAG context if documents exist
         rag_results = query_documents(message)
