@@ -15,7 +15,8 @@ COPY pyproject.toml /app/pyproject.toml
 
 # Install dependencies into a local directory
 RUN pip install --no-cache-dir --prefix=/install \
-    'strands-agents[ollama]>=0.1.0' \
+    'strands-agents>=0.1.0' \
+    'ollama>=0.6.0' \
     'fastapi>=0.110.0' \
     'uvicorn[standard]>=0.27.0' \
     'python-multipart>=0.0.9' \

@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Multi-agent AI system with RAG, auth, and web UI using Strands Agents SDK"
 requires-python = ">=3.10"
 dependencies = [
-    "strands-agents[ollama]>=0.1.0",
+    "strands-agents>=0.1.0",
+    "ollama>=0.6.0",
     "strands-agents-tools>=0.1.0",
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.27.0",
