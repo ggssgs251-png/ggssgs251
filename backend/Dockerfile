@@ -26,7 +26,9 @@ RUN pip install --no-cache-dir --prefix=/install \
     'pypdf2>=3.0.0' \
     'python-docx>=1.1.0' \
     'pydantic>=2.0.0' \
-    'httpx>=0.27.0'
+    'httpx>=0.27.0' \
+    'jinja2>=3.1.0' \
+    'aiofiles>=24.1.0'
 
 
 # ── Stage 2: Runtime ──
@@ -59,7 +61,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV OLLAMA_HOST=http://ollama:11434
 ENV OLLAMA_MODEL=llama3.1
 ENV OLLAMA_EMBED_MODEL=nomic-embed-text
-ENV CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+ENV CORS_ORIGINS=http://localhost:8000
 ENV SECRET_KEY=change-me-in-production-use-a-real-secret
 
 # Expose port

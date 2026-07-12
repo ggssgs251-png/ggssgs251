@@ -31,4 +31,4 @@ DEFAULT_RAG_RESULTS = 5
 RAG_MIN_SCORE = 0.3
 
 # CORS
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:8000").split(",")
