@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Frontend (Node)
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# App data (auto-created)
+data/
+
+# Environment
+.env.local
+.env.production
