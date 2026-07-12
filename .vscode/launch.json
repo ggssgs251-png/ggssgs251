@@ -1,0 +1,97 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🐍 Debug FastAPI Server (reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "backend.app:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "jinja": true,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "OLLAMA_HOST": "http://localhost:11434",
+        "OLLAMA_MODEL": "llama3.1",
+        "OLLAMA_EMBED_MODEL": "nomic-embed-text"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "🐍 Debug FastAPI Server (stable)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "backend.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "jinja": true,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "OLLAMA_HOST": "http://localhost:11434",
+        "OLLAMA_MODEL": "llama3.1",
+        "OLLAMA_EMBED_MODEL": "nomic-embed-text"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "🧪 Debug Guardrail Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "backend/tests/test_guardrails.py",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "💻 Debug CLI Entry Point",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.main",
+      "args": [],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "🔗 Attach to Running Server",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "."
+        }
+      ]
+    },
+    {
+      "name": "📓 Debug Jupyter Notebook Cell",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "notebook",
+      "args": [
+        "--notebook-dir=notebooks"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
