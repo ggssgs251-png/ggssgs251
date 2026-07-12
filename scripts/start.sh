@@ -51,7 +51,9 @@ else
         echo "  📦 Downloading for macOS..."
         curl -fsSL https://ollama.ai/install.sh | sh
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        echo "  📦 Downloading for Linux..."
+        echo "  📦 Installing prerequisites (zstd)..."
+        apt-get update -qq && apt-get install -y -qq zstd 2>/dev/null || " ";
+        echo "  📦 Downloading Ollama for Linux..."
         curl -fsSL https://ollama.ai/install.sh | sh
     else
         echo -e "  ${RED}❌ Please install Ollama manually: https://ollama.ai${NC}"
