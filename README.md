@@ -74,7 +74,7 @@ Chat with a team of AI specialists — a **Data Tutor** and **Code Advisor** —
               ┌────────────▼──────────────────────────────┐
               │     Ollama (Port 11434)                    │
               │  ┌──────────┐  ┌───────────────────────┐  │
-              │  │ llama3.1 │  │ nomic-embed-text      │  │
+              │  │ tinyllama │  │ nomic-embed-text      │  │
               │  │  (LLM)   │  │  (embeddings)         │  │
               │  └──────────┘  └───────────────────────┘  │
               └───────────────────────────────────────────┘
@@ -107,7 +107,7 @@ User Asks Question
 
 The fastest way to get everything running is with Docker Compose. This starts two services:
 
-1. **Ollama** — LLM server (automatically pulls `llama3.1` and `nomic-embed-text`)
+1. **Ollama** — LLM server (automatically pulls `tinyllama` and `nomic-embed-text`)
 2. **Backend** — FastAPI + Agent Swarm + ChromaDB + Jinja2 web UI (all in one container)
 
 ### Prerequisites
@@ -187,7 +187,7 @@ If you prefer to run without Docker.
 curl -fsSL https://ollama.ai/install.sh | sh
 
 # Pull the LLM and embedding models
-ollama pull llama3.1
+ollama pull tinyllama
 ollama pull nomic-embed-text
 
 # Start the Ollama server
@@ -352,7 +352,7 @@ All services on a shared bridge network `ggssgs251-net`, reachable by container 
 |----------|---------|-------------|
 | `SECRET_KEY` | `change-me-in-production...` | JWT signing secret (REQUIRED to change in production) |
 | `OLLAMA_HOST` | `http://ollama:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `llama3.1` | LLM model for agent responses |
+| `OLLAMA_MODEL` | `tinyllama` | LLM model for agent responses |
 | `OLLAMA_EMBED_MODEL` | `nomic-embed-text` | Model for generating document embeddings |
 | `CORS_ORIGINS` | `http://localhost:8000` | Allowed CORS origins |
 

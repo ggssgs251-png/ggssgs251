@@ -47,7 +47,7 @@ services:
       - backend_data:/app/data
     environment:
       - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=llama3.1
+      - OLLAMA_MODEL=tinyllama
       - OLLAMA_EMBED_MODEL=nomic-embed-text
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-real-secret}
       - CORS_ORIGINS=http://localhost:8000

@@ -10,7 +10,7 @@
 # This script:
 #   1. Checks for Ollama (installs if missing — macOS/Linux)
 #   2. Starts Ollama server if not running
-#   3. Pulls required models (llama3.1, nomic-embed-text)
+#   3. Pulls required models (tinyllama, nomic-embed-text)
 #   4. Activates the Python virtual environment
 #   5. Starts the FastAPI server (serves both API + Web UI)
 #   6. Opens http://localhost:8000 in your browser
@@ -95,13 +95,13 @@ fi
 # ──────────────────────────────────────────────
 echo -e "${YELLOW}[3/4]📥 Pulling models...${NC}"
 
-# Check and pull llama3.1
-if ollama list 2>/dev/null | grep -q "llama3.1"; then
-    echo -e "  ✅ llama3.1 already downloaded"
+# Check and pull tinyllama
+if ollama list 2>/dev/null | grep -q "tinyllama"; then
+    echo -e "  ✅ tinyllama already downloaded"
 else
-    echo -e "  ⏳ Downloading llama3.1 (~4 GB)..."
-    ollama pull llama3.1
-    echo -e "  ✅ llama3.1 ready"
+    echo -e "  ⏳ Downloading tinyllama (~637 MB)..."
+    ollama pull tinyllama
+    echo -e "  ✅ tinyllama ready"
 fi
 
 # Check and pull nomic-embed-text

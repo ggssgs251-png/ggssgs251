@@ -29,7 +29,7 @@ echo "🔬 Kernel:  ggssgs251 (Python 3.10)"
 echo ""
 echo "⚠️  Make sure these are running BEFORE using the notebooks:"
 echo "   1. Backend: uvicorn backend.app:app --reload --port 8000"
-echo "   2. Ollama:  ollama serve  (with llama3.1 and nomic-embed-text)"
+echo "   2. Ollama:  ollama serve  (with tinyllama and nomic-embed-text)"
 echo ""
 
 # Activate venv

@@ -60,7 +60,7 @@ RUN mkdir -p /app/data
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV OLLAMA_HOST=http://ollama:11434
-ENV OLLAMA_MODEL=llama3.1
+ENV OLLAMA_MODEL=tinyllama
 ENV OLLAMA_EMBED_MODEL=nomic-embed-text
 ENV CORS_ORIGINS=http://localhost:8000
 ENV SECRET_KEY=change-me-in-production-use-a-real-secret
