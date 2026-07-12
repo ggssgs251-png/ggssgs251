@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from strands.models.ollama import OllamaModel
 
 from backend.auth import get_current_user
+from backend.config import OLLAMA_HOST, OLLAMA_MODEL
 from backend.guardrails.checker import get_checker
 from backend.logging_config import get_stage_logger
 from backend.models import User
@@ -33,8 +34,8 @@ def _get_or_create_swarm():
     global _swarm_cache
     if "swarm" not in _swarm_cache:
         model = OllamaModel(
-            host="http://localhost:11434",
-            model_id="llama3.1",
+            host=OLLAMA_HOST,
+            model_id=OLLAMA_MODEL,
             temperature=0.7,
         )
         _swarm_cache["swarm"] = create_swarm(model)

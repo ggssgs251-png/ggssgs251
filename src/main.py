@@ -9,14 +9,14 @@ Requires Ollama running locally with a model pulled (e.g., llama3.1).
 
 from strands.models.ollama import OllamaModel
 
+from backend.config import OLLAMA_HOST as _host, OLLAMA_MODEL as _model
 from src.orchestrator import create_swarm, run_swarm
 
 
 def main() -> None:
     """Main entry point for the CLI application."""
-    # Configuration
-    ollama_host = "http://localhost:11434"
-    ollama_model_id = "llama3.1"  # Change to your preferred Ollama model
+    ollama_host = _host
+    ollama_model_id = _model  # From backend/config.py
 
     print("=" * 60)
     print("  🤖 ggssgs251 — Multi-Agent AI System")
