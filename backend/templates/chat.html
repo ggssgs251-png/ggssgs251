@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+<div class="h-screen flex flex-col">
+  <!-- Header -->
+  <header class="glass border-b shrink-0">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="p-2 rounded-lg hover:bg-muted transition-colors">←</a>
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+          <span class="text-white text-xs font-bold">G</span>
+        </div>
+        <span class="font-bold text-sm">ggssgs251 Chat</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="resetChat()" class="px-3 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted transition-all">🗑️ New Chat</button>
+        <button onclick="handleLogout()" class="text-xs text-muted-foreground hover:text-white px-2 py-1">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden max-w-5xl mx-auto w-full">
+    <!-- Main Chat -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <div id="messages" class="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        <div class="flex gap-3">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">🧠</div>
+          <div class="card max-w-[80%] rounded-2xl rounded-tl-md px-4 py-2.5">
+            <div class="text-xs font-medium text-muted-foreground mb-1">orchestrator</div>
+            <div class="text-sm leading-relaxed">Hello! I'm your AI agent team. Ask me anything about data analysis, statistics, coding, or your uploaded documents.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="shrink-0 border-t bg-background/80 backdrop-blur-xl px-4 py-3">
+        <div class="flex gap-2 max-w-3xl mx-auto">
+          <input id="chat-input" type="text" placeholder="Ask your AI team anything..." class="input" autofocus />
+          <button onclick="sendMessage()" id="send-btn" class="btn-primary px-4 py-2.5 flex items-center gap-1.5 text-sm">
+            <span>➤</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar: RAG -->
+    <aside class="hidden lg:flex w-72 border-l flex-col bg-card/50">
+      <div class="p-4 border-b">
+        <h3 class="text-sm font-semibold">📚 Knowledge Base</h3>
+        <p class="text-xs text-muted-foreground mt-1">Search your indexed documents</p>
+      </div>
+      <div class="p-4 flex-1 flex flex-col gap-3">
+        <textarea id="rag-query" placeholder="Search your documents..." class="input resize-none h-20 text-sm"></textarea>
+        <button onclick="searchRag()" class="btn-primary text-sm w-full">Search Documents</button>
+        <div id="rag-results" class="flex-1 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap"></div>
+        <a href="/dashboard" class="text-xs text-muted-foreground hover:text-purple-400 transition-colors text-center mt-auto">Manage documents →</a>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let isLoading = false;
+
+function addMessage(role, content, agent = 'orchestrator', path = null) {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `flex gap-3 ${role === 'user' ? 'justify-end' : ''}`;
+
+  if (role === 'assistant') {
+    const icons = { orchestrator: '🧠', data_tutor: '📊', code_advisor: '💻' };
+    div.innerHTML = `
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0 mt-1">${icons[agent] || '🧠'}</div>
+      <div class="card max-w-[80%] rounded-2xl rounded-tl-md px-4 py-2.5">
+        <div class="text-xs font-medium text-muted-foreground mb-1 capitalize">${agent.replace('_', ' ')}</div>
+        <div class="text-sm leading-relaxed whitespace-pre-wrap">${content}</div>
+        ${path && path.length > 1 ? `<div class="mt-2 pt-2 border-t text-xs text-muted-foreground">Path: ${path.join(' → ')}</div>` : ''}
+      </div>`;
+  } else {
+    div.innerHTML = `<div class="bg-purple-600 text-white max-w-[80%] rounded-2xl rounded-tr-md px-4 py-2.5"><div class="text-sm">${content}</div></div>
+      <div class="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0 mt-1 border">👤</div>`;
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addTyping() {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.id = 'typing-indicator';
+  div.className = 'flex gap-3';
+  div.innerHTML = `<div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">🧠</div>
+    <div class="card rounded-2xl rounded-tl-md px-4 py-3">
+      <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:0ms"></span><span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:150ms"></span><span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:300ms"></span></div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  input.value = '';
+  isLoading = true;
+  addMessage('user', text);
+  addTyping();
+
+  try {
+    const res = await api('/chat/message', {
+      method: 'POST',
+      body: JSON.stringify({ message: text }),
+    });
+    removeTyping();
+    addMessage('assistant', res.reply, res.agent, res.routing_path);
+  } catch (err) {
+    removeTyping();
+    addMessage('assistant', `❌ Error: ${err.message}`);
+  }
+  isLoading = false;
+  document.getElementById('chat-input').focus();
+}
+
+async function resetChat() {
+  try {
+    await api('/chat/reset', { method: 'POST' });
+    document.getElementById('messages').innerHTML = `<div class="flex gap-3">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">🧠</div>
+      <div class="card max-w-[80%] rounded-2xl rounded-tl-md px-4 py-2.5">
+        <div class="text-xs font-medium text-muted-foreground mb-1">orchestrator</div>
+        <div class="text-sm leading-relaxed">Conversation reset. How can I help you?</div>
+      </div>
+    </div>`;
+  } catch {}
+}
+
+async function searchRag() {
+  const query = document.getElementById('rag-query').value.trim();
+  if (!query) return;
+  const el = document.getElementById('rag-results');
+  el.textContent = 'Searching...';
+  try {
+    const res = await api('/rag/query', { method: 'POST', body: JSON.stringify({ query }) });
+    if (res.sources.length === 0) {
+      el.textContent = 'No relevant documents found.';
+    } else {
+      el.textContent = `Found ${res.sources.length} passages:\n\n${res.sources.map((s, i) => `[${i+1}] ${s.source} (${(s.score*100).toFixed(0)}%)\n${s.content.slice(0, 200)}...`).join('\n\n')}`;
+    }
+  } catch (err) {
+    el.textContent = `Error: ${err.message}`;
+  }
+}
+
+document.getElementById('chat-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+function handleLogout() {
+  localStorage.removeItem('token');
+  window.location.href = '/';
+}
+</script>
+{% endblock %}

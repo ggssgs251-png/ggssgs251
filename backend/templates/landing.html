@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<!-- Navigation -->
+<nav class="glass border-b sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+        <span class="text-white text-sm font-bold">G</span>
+      </div>
+      <span class="font-bold text-lg">ggssgs251</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/login" class="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Sign In</a>
+      <a href="/register" class="btn-primary text-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="pt-32 pb-20 px-4 text-center">
+  <div class="max-w-4xl mx-auto">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-sm text-purple-400 font-medium mb-8">
+      Powered by Strands Agents + Ollama
+    </div>
+    <h1 class="text-4xl sm:text-6xl font-extrabold leading-tight mb-6">
+      Your <span class="gradient-text">AI Agent Team</span><br />for Data & Code
+    </h1>
+    <p class="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+      A multi-agent AI system with a Data Tutor and Code Advisor, augmented with your proprietary knowledge. Chat, upload documents, and get intelligent answers — all running locally.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="/register" class="btn-primary text-lg px-8 py-3">Start Free</a>
+      <a href="/login" class="px-8 py-3 rounded-xl border text-lg font-medium hover:bg-muted transition-all">Sign In</a>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="py-20 px-4 max-w-6xl mx-auto">
+  <h2 class="text-3xl font-bold text-center mb-16">Three Specialized Agents</h2>
+  <div class="grid md:grid-cols-3 gap-8">
+    {% for f in [
+      { "icon": "🧠", "title": "Orchestrator", "desc": "Intelligently routes your questions to the right specialist — Data Tutor or Code Advisor.", "color": "from-violet-500 to-purple-600" },
+      { "icon": "📊", "title": "Data Tutor", "desc": "Your data science mentor. Explains statistics, analyzes datasets, and suggests visualizations.", "color": "from-blue-500 to-cyan-500" },
+      { "icon": "💻", "title": "Code Advisor", "desc": "Your programming companion. Reviews code, suggests improvements, and teaches best practices.", "color": "from-emerald-500 to-teal-500" },
+    ] %}
+    <div class="card p-8 hover:shadow-xl transition-all duration-300">
+      <div class="text-3xl mb-4">{{ f.icon }}</div>
+      <h3 class="text-xl font-semibold mb-3">{{ f.title }}</h3>
+      <p class="text-muted-foreground leading-relaxed">{{ f.desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- RAG Feature -->
+<section class="py-20 px-4 bg-gradient-to-b from-muted/30 to-transparent">
+  <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-sm font-medium text-purple-400 mb-4">🔒 Private & Local</div>
+      <h2 class="text-3xl font-bold mb-4">Your data stays <span class="gradient-text">yours</span></h2>
+      <p class="text-muted-foreground text-lg leading-relaxed mb-6">Upload PDFs, Word docs, or text files to build a private knowledge base. The RAG engine indexes your documents using local embeddings — your proprietary data never leaves your machine.</p>
+      <ul class="space-y-3 text-muted-foreground">
+        <li class="flex items-center gap-3">📄 Support for PDF, DOCX, TXT, Markdown</li>
+        <li class="flex items-center gap-3">🔎 Semantic search across all your documents</li>
+        <li class="flex items-center gap-3">🛡️ 100% local — no data sent to external APIs</li>
+      </ul>
+    </div>
+    <div class="card p-8">
+      <div class="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+        <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+        <span class="ml-2 font-mono">knowledge-base</span>
+      </div>
+      <div class="space-y-3">
+        <div class="p-3 rounded-lg bg-muted/50 border text-sm"><span class="text-purple-400 font-medium">Q:</span> What does our Q3 report say about customer churn?</div>
+        <div class="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20 text-sm"><span class="text-purple-400 font-medium">A:</span> Based on your Q3 report, customer churn decreased by 12% due to the new onboarding flow...</div>
+        <div class="flex items-center gap-2 text-xs text-muted-foreground">📚 Retrieved from: Q3_Analysis_Report.pdf</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+    <h2 class="text-3xl font-bold mb-4">Ready to meet your AI team?</h2>
+    <p class="text-lg text-muted-foreground mb-8">No cloud costs. No data sharing. Just you, your documents, and three intelligent assistants working together.</p>
+    <a href="/register" class="btn-primary text-lg px-8 py-3">Create Your Account</a>
+  </div>
+</section>
+
+<footer class="py-8 px-4 border-t text-center text-sm text-muted-foreground">
+  ggssgs251 — Powered by Strands Agents SDK · FastAPI · Ollama
+</footer>
+{% endblock %}

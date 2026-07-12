@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<header class="glass border-b sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+        <span class="text-white text-sm font-bold">G</span>
+      </div>
+      <span class="font-bold">ggssgs251</span>
+      <span class="text-sm text-muted-foreground">Dashboard</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/chat" class="btn-primary text-sm px-4 py-2">Open Chat</a>
+      <button onclick="handleLogout()" class="px-3 py-2 rounded-xl border text-sm text-muted-foreground hover:text-white transition-all">Sign Out</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+  <div>
+    <h1 class="text-2xl font-bold" id="welcome-heading">Welcome!</h1>
+    <p class="text-muted-foreground mt-1">Your AI agent team is ready. Upload documents to build your knowledge base, then chat with your agents.</p>
+  </div>
+
+  <!-- Agent Cards -->
+  <div>
+    <h2 class="text-xl font-semibold mb-4">Your AI Team</h2>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="card p-6">
+        <div class="flex items-start gap-4">
+          <div class="text-3xl">📊</div>
+          <div>
+            <h3 class="font-semibold">Data Tutor</h3>
+            <p class="text-sm text-muted-foreground mt-1">Data science, statistics, analysis, visualizations</p>
+          </div>
+        </div>
+      </div>
+      <div class="card p-6">
+        <div class="flex items-start gap-4">
+          <div class="text-3xl">💻</div>
+          <div>
+            <h3 class="font-semibold">Code Advisor</h3>
+            <p class="text-sm text-muted-foreground mt-1">Code reviews, explanations, best practices</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Knowledge Base -->
+  <div>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Knowledge Base</h2>
+      <label class="btn-primary text-sm cursor-pointer flex items-center gap-1.5">
+        <span>📤</span> Upload Document
+        <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" class="hidden" onchange="handleUpload(this)" />
+      </label>
+    </div>
+
+    <div id="upload-status" class="hidden mb-4 p-4 rounded-xl border card"></div>
+
+    <div class="card">
+      <div id="doc-list">
+        <div class="p-8 text-center text-muted-foreground" id="loading-state">Loading documents...</div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadDashboard() {
+  const token = localStorage.getItem('token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  try {
+    const me = await api('/auth/me');
+    document.getElementById('welcome-heading').textContent = `Welcome, ${me.username}!`;
+  } catch { window.location.href = '/login'; return; }
+
+  await loadDocuments();
+}
+
+async function loadDocuments() {
+  const el = document.getElementById('doc-list');
+  try {
+    const data = await api('/rag/documents');
+    if (data.count === 0) {
+      el.innerHTML = `<div class="p-8 text-center">
+        <p class="text-4xl mb-3">📄</p>
+        <p class="text-muted-foreground">No documents indexed yet</p>
+        <p class="text-sm text-muted-foreground/60 mt-1">Upload a PDF, DOCX, TXT, or Markdown file to get started</p>
+      </div>`;
+    } else {
+      el.innerHTML = `<div class="divide-y divide-border">
+        ${data.documents.map(d => `<div class="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors">
+          <div class="flex items-center gap-3">
+            <span>📄</span>
+            <span class="text-sm">${d.filename}</span>
+          </div>
+          <button onclick="deleteDoc('${d.filename}')" class="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all" title="Delete">🗑️</button>
+        </div>`).join('')}
+      </div>`;
+    }
+  } catch (err) {
+    el.innerHTML = `<div class="p-8 text-center text-red-400">Error loading documents: ${err.message}</div>`;
+  }
+}
+
+async function handleUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const status = document.getElementById('upload-status');
+  status.className = 'mb-4 p-4 rounded-xl border bg-card flex items-center gap-3 text-sm';
+  status.innerHTML = `<span class="animate-spin">⏳</span> Indexing ${file.name}...`;
+  status.classList.remove('hidden');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/rag/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+    status.className = 'mb-4 p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/20 text-emerald-400 text-sm';
+    status.textContent = `✅ ${data.message}`;
+    await loadDocuments();
+  } catch (err) {
+    status.className = 'mb-4 p-4 rounded-xl border bg-red-500/10 border-red-500/20 text-red-400 text-sm';
+    status.textContent = `❌ ${err.message}`;
+  }
+  input.value = '';
+  setTimeout(() => { status.classList.add('hidden'); }, 5000);
+}
+
+async function deleteDoc(filename) {
+  if (!confirm(`Delete "${filename}"?`)) return;
+  try {
+    await api(`/rag/documents/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    showToast('Document deleted', 'success');
+    await loadDocuments();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('token');
+  window.location.href = '/';
+}
+
+loadDashboard();
+</script>
+{% endblock %}

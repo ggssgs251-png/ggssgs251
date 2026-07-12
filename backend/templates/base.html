@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}ggssgs251{% endblock %} — Multi-Agent AI System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#7c3aed', foreground: '#ffffff' },
+            accent:  { DEFAULT: '#8b5cf6', foreground: '#ffffff' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --background: #0f0f1a;
+      --foreground: #e8e8f0;
+      --card: #1a1a2e;
+      --card-foreground: #e8e8f0;
+      --muted: #2a2a3e;
+      --muted-foreground: #9090a8;
+      --border: #2a2a3e;
+      --ring: #7c3aed;
+      --radius: 0.75rem;
+    }
+    body {
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .glass {
+      background: rgba(26, 26, 46, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+      color: white;
+      font-weight: 600;
+      border-radius: 0.75rem;
+      padding: 0.5rem 1.5rem;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .input {
+      width: 100%;
+      padding: 0.625rem 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+      background: var(--background);
+      color: var(--foreground);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input:focus {
+      border-color: var(--ring);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3);
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3a3a52; border-radius: 3px; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="min-h-screen">
+  {% block content %}{% endblock %}
+
+  <script>
+    // ── Toast notification helper ──
+    function showToast(message, type = 'info') {
+      const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg ${colors[type] || colors.info} transition-all duration-300`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    // ── API helper ──
+    async function api(path, options = {}) {
+      const token = localStorage.getItem('token');
+      const headers = { ...options.headers };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+
+      const res = await fetch(`/api${path}`, { ...options, headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

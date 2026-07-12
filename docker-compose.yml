@@ -18,7 +18,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    # Pull required models on startup via an init script
     entrypoint: >
       sh -c "
       echo 'Starting Ollama server...' &&
@@ -34,7 +33,7 @@ services:
     networks:
       - ggssgs251-net
 
-  # ── Backend API ──
+  # ── Backend (serves both API + Frontend via Jinja2 templates) ──
   backend:
     build:
       context: .
@@ -51,7 +50,7 @@ services:
       - OLLAMA_MODEL=llama3.1
       - OLLAMA_EMBED_MODEL=nomic-embed-text
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-real-secret}
-      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+      - CORS_ORIGINS=http://localhost:8000
     ports:
       - "8000:8000"
     healthcheck:
@@ -60,21 +59,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 15s
-    networks:
-      - ggssgs251-net
-
-  # ── Frontend ──
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: ggssgs251-frontend
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
     networks:
       - ggssgs251-net
 

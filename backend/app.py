@@ -1,16 +1,16 @@
 """FastAPI application entry point.
 
-Run with: uvicorn backend.app:app --reload
-Or:        python -m backend.app
-
-Uses structured stage-level logging for monitoring each pipeline stage.
-Stages: auth, guardrail, rag, chat, swarm, api.
+Serves both the HTML frontend (Jinja2 templates) and REST API.
+Run with: uvicorn backend.app:app --reload --port 8000
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from backend.auth import router as auth_router
 from backend.config import CORS_ORIGINS, DATA_DIR, UPLOAD_DIR
@@ -22,8 +22,13 @@ from backend.routes_rag import router as rag_router
 
 # Initialize structured logging
 init_logging()
-
 logger = get_stage_logger("system")
+
+# ── Setup templates and static files ──
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+static_dir = BASE_DIR / "static"
+static_dir.mkdir(parents=True, exist_ok=True)
 
 
 @asynccontextmanager
@@ -45,7 +50,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow the frontend dev server
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -55,20 +60,43 @@ app.add_middleware(
 )
 
 
-# Health check
+# ── Frontend Routes (Jinja2 Templates) ──
+
+@app.get("/", response_class=HTMLResponse)
+async def landing_page(request: Request):
+    return templates.TemplateResponse("landing.html", {"request": request})
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    return templates.TemplateResponse("chat.html", {"request": request})
+
+
+# ── API Routes ──
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "version": "0.1.0"}
 
 
-# ── Guardrail test endpoint ──
 @app.post("/guardrail/check")
 def check_guardrail(text: str = ""):
-    """Test the guardrail agent against arbitrary text.
-
-    Use this endpoint to verify the guardrail is working during setup.
-    Example: curl -X POST 'http://localhost:8000/guardrail/check?text=test%20message'
-    """
+    """Test the guardrail agent against arbitrary text."""
     result = get_checker().check(text)
     return {
         "passed": result.passed,
@@ -79,9 +107,11 @@ def check_guardrail(text: str = ""):
     }
 
 
-app.include_router(auth_router)
-app.include_router(chat_router)
-app.include_router(rag_router)
+# Register REST API routers (all prefixed with /api via nginx proxy)
+# The frontend JS calls /api/auth/*, /api/chat/*, /api/rag/*
+app.include_router(auth_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(rag_router, prefix="/api")
 
 
 def run():

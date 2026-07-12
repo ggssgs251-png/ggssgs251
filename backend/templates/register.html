@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Create Account{% endblock %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+          <span class="text-white font-bold">G</span>
+        </div>
+        <span class="font-bold text-xl">ggssgs251</span>
+      </a>
+      <h1 class="text-2xl font-bold mt-6">Create your account</h1>
+      <p class="text-muted-foreground mt-1">Start using your AI agent team</p>
+    </div>
+
+    <div class="card p-8 space-y-4">
+      <div id="error-message" class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 hidden"></div>
+
+      <div class="space-y-2">
+        <label class="text-sm font-medium">Email</label>
+        <input id="email" type="email" class="input" placeholder="you@example.com" required autofocus />
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-sm font-medium">Username</label>
+        <input id="username" type="text" class="input" placeholder="Choose a username" required minlength="3" />
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-sm font-medium">Password</label>
+        <input id="password" type="password" class="input" placeholder="Min 6 characters" required minlength="6" />
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-sm font-medium">Confirm Password</label>
+        <input id="confirm-password" type="password" class="input" placeholder="Repeat your password" required />
+      </div>
+
+      <button onclick="handleRegister()" id="register-btn" class="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
+        <span id="btn-text">Create Account</span>
+        <span id="btn-spinner" class="hidden w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+      </button>
+
+      <p class="text-center text-sm text-muted-foreground">
+        Already have an account? <a href="/login" class="text-purple-400 font-medium hover:underline">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function handleRegister() {
+  const email = document.getElementById('email').value;
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const confirm = document.getElementById('confirm-password').value;
+  const errorEl = document.getElementById('error-message');
+  const btn = document.getElementById('register-btn');
+  const text = document.getElementById('btn-text');
+  const spinner = document.getElementById('btn-spinner');
+
+  errorEl.classList.add('hidden');
+
+  if (password !== confirm) {
+    errorEl.textContent = 'Passwords do not match';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  text.textContent = 'Creating account...';
+  spinner.classList.remove('hidden');
+
+  try {
+    // Register
+    await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, username, password }),
+    });
+    // Auto-login
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+    localStorage.setItem('token', data.access_token);
+    window.location.href = '/dashboard';
+  } catch (err) {
+    errorEl.textContent = err.message || 'Registration failed';
+    errorEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    text.textContent = 'Create Account';
+    spinner.classList.add('hidden');
+  }
+}
+</script>
+{% endblock %}

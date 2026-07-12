@@ -47,6 +47,9 @@ COPY backend/ /app/backend/
 COPY src/ /app/src/
 COPY pyproject.toml /app/
 
+# Copy prompts (system prompts for agents)
+COPY prompts/ /app/prompts/
+
 # Create data directory (will be mounted as a volume)
 RUN mkdir -p /app/data
 
