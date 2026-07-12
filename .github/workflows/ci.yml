@@ -1,0 +1,100 @@
+# ──────────────────────────────────────────────────
+# CI — Continuous Integration
+# ──────────────────────────────────────────────────
+# Runs on every push to main and every PR.
+#
+# Jobs:
+#   1. python-tests — Guardrail unit tests (no Ollama needed)
+#   2. frontend-check — TypeScript type check + Vite build
+#   3. lint — Python linting with ruff
+# ──────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Python Guardrail Tests ──
+  python-tests:
+    name: 🐍 Guardrail Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          # Install ONLY the dependencies needed for guardrail tests (no Ollama/chromadb)
+          pip install 'fastapi>=0.110.0' 'pydantic>=2.0.0'
+
+      - name: Run guardrail tests
+        run: |
+          python -m pytest backend/tests/test_guardrails.py -v --tb=short
+
+  # ── Frontend TypeScript Check ──
+  frontend-check:
+    name: ⚛️ Frontend Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: TypeScript type check
+        working-directory: ./frontend
+        run: npx tsc --noEmit
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  # ── Python Lint ──
+  lint:
+    name: 📝 Python Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff
+        run: ruff check backend/ src/ --quiet
