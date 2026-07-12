@@ -10,7 +10,6 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader
 
 from backend.auth import router as auth_router
@@ -27,16 +26,20 @@ logger = get_stage_logger("system")
 
 # ── Setup templates and static files ──
 BASE_DIR = Path(__file__).resolve().parent
-
-# Create a Jinja2 environment without auto-reload caching issues
 jinja_env = Environment(
     loader=FileSystemLoader(str(BASE_DIR / "templates")),
-    auto_reload=False,  # disable cache key issues in constrained envs
-    enable_async=True,
+    auto_reload=False,
 )
-templates = Jinja2Templates(env=jinja_env)
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
+
+
+def _render(name: str, request: Request, **kwargs) -> HTMLResponse:
+    """Render a Jinja2 template, bypassing starlette's caching wrapper."""
+    template = jinja_env.get_template(name)
+    context = {"request": request, **kwargs}
+    html = template.render(context)
+    return HTMLResponse(content=html)
 
 
 @asynccontextmanager
@@ -72,27 +75,27 @@ app.add_middleware(
 
 @app.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
-    return templates.TemplateResponse("landing.html", {"request": request})
+    return _render("landing.html", request)
 
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return _render("login.html", request)
 
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
+    return _render("register.html", request)
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return _render("dashboard.html", request)
 
 
 @app.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request):
-    return templates.TemplateResponse("chat.html", {"request": request})
+    return _render("chat.html", request)
 
 
 # ── API Routes ──
@@ -115,8 +118,7 @@ def check_guardrail(text: str = ""):
     }
 
 
-# Register REST API routers (all prefixed with /api via nginx proxy)
-# The frontend JS calls /api/auth/*, /api/chat/*, /api/rag/*
+# Register REST API routers
 app.include_router(auth_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(rag_router, prefix="/api")
