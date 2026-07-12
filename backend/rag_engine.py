@@ -12,6 +12,7 @@ from time import time
 from typing import Any
 
 import chromadb
+import httpx
 from chromadb.config import Settings
 
 from backend.config import (
@@ -58,8 +59,6 @@ def _get_or_create_collection(collection_name: str = "documents"):
 # Embedding via Ollama (using httpx)
 # ──────────────────────────────────────────────
 
-import httpx
-
 
 def _embed_texts(texts: list[str]) -> list[list[float]]:
     """Generate embeddings for a list of texts using Ollama."""
@@ -76,9 +75,8 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
             data = response.json()
             return data.get("embeddings", [])
     except Exception as e:
-        logger.warning(f"Ollama embedding failed ({e}), using fallback hash-based vectors")
+        logger.warning("Ollama embedding failed (%s), using fallback hash-based vectors", e)
         # Fallback: simple deterministic vectors so the app doesn't crash
-        import hashlib
         fallback = []
         for t in texts:
             h = hashlib.sha256(t.encode()).digest()

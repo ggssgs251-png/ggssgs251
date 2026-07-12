@@ -18,7 +18,6 @@ monitor, filter, and alert on each processing stage.
 import logging
 import logging.config
 import sys
-from datetime import datetime, timezone
 from typing import Any
 
 # ──────────────────────────────────────────────
@@ -45,8 +44,6 @@ class StageFormatter(logging.Formatter):
         stage = logger_name.split(".")[-1] if logger_name.startswith("stage") else "system"
         emoji = STAGE_EMOJIS.get(stage, "📋")
 
-        # Build the log message with stage prefix
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         level = record.levelname
         message = record.getMessage()
 
@@ -190,7 +187,6 @@ def init_logging() -> None:
 
     Call this once at application startup (in app.py lifespan).
     """
-    import os
     from pathlib import Path
 
     # Ensure logs directory exists
@@ -222,7 +218,6 @@ def log_stage_event(
         **context: Extra context fields (user, duration_ms, status, score, etc.)
     """
     logger = get_stage_logger(stage)
-    log_method = getattr(logger, level, logger.info)
 
     # Create a LogRecord with extra context
     extra = logging.LogRecord(

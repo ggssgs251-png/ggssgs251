@@ -126,6 +126,9 @@ def send_message(
         elif hasattr(result, "results") and result.results:
             routing_path = list(result.results.keys())
 
+        # Determine which agent handled it
+        final_agent = routing_path[-1] if routing_path else "orchestrator"
+
         elapsed = (time() - t0) * 1000
         logger.info(
             "Chat completed | user=%s | agent=%s | path=%s | dur=%.0fms",

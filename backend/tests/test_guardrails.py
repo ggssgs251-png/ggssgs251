@@ -4,11 +4,19 @@ All tests run without Ollama — they test pure Python regex + blocklist matchin
 Scoring: threshold = 10. Items with weight < 10 alone will PASS (flagged but not blocked).
 """
 
-import sys
-from pathlib import Path
+# ruff: noqa: E402 — sys.path setup before application imports is intentional
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-(Path(__file__).resolve().parent.parent.parent / "data" / "logs").mkdir(parents=True, exist_ok=True)
+from pathlib import Path
+import sys
+
+# Ensure the data/logs directory exists before importing the guardrail
+_log_dir = Path(__file__).resolve().parent.parent.parent / "data" / "logs"
+_log_dir.mkdir(parents=True, exist_ok=True)
+
+# Ensure the project root is on sys.path
+_project_root = str(Path(__file__).resolve().parent.parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 from backend.guardrails.checker import GuardrailChecker
 
@@ -23,7 +31,7 @@ def test_safe_inputs_pass():
         "Hello, how are you today?",
         "Explain gradient descent to me",
     ]:
-        assert checker.check(msg).passed, f"Safe message should PASS"
+        assert checker.check(msg).passed, "Safe message should PASS"
 
 
 def test_ssn_detection():

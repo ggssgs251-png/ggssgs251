@@ -4,9 +4,7 @@ All text-based inputs (queries, filenames) are inspected by the Guardrail
 Agent before processing. Monitored at the 'rag' stage.
 """
 
-from time import time
-
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from backend.auth import get_current_user
 from backend.guardrails.checker import get_checker

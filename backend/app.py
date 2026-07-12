@@ -7,15 +7,18 @@ Uses structured stage-level logging for monitoring each pipeline stage.
 Stages: auth, guardrail, rag, chat, swarm, api.
 """
 
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.auth import router as auth_router
 from backend.config import CORS_ORIGINS, DATA_DIR, UPLOAD_DIR
 from backend.database import init_db
+from backend.guardrails.checker import get_checker
 from backend.logging_config import get_stage_logger, init_logging
+from backend.routes_chat import router as chat_router
+from backend.routes_rag import router as rag_router
 
 # Initialize structured logging
 init_logging()
@@ -66,7 +69,6 @@ def check_guardrail(text: str = ""):
     Use this endpoint to verify the guardrail is working during setup.
     Example: curl -X POST 'http://localhost:8000/guardrail/check?text=test%20message'
     """
-    from backend.guardrails.checker import get_checker
     result = get_checker().check(text)
     return {
         "passed": result.passed,
@@ -76,11 +78,6 @@ def check_guardrail(text: str = ""):
         "reason": result.reason if not result.passed else "",
     }
 
-
-# Register routers
-from backend.auth import router as auth_router
-from backend.routes_chat import router as chat_router
-from backend.routes_rag import router as rag_router
 
 app.include_router(auth_router)
 app.include_router(chat_router)

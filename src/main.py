@@ -7,8 +7,6 @@ Or after installing: ggssgs251
 Requires Ollama running locally with a model pulled (e.g., llama3.1).
 """
 
-import sys
-
 from strands.models.ollama import OllamaModel
 
 from src.orchestrator import create_swarm, run_swarm
@@ -89,7 +87,7 @@ def main() -> None:
             print()
             print("💡 Make sure Ollama is running and the model is pulled.")
             print(f"   > ollama pull {ollama_model_id}")
-            print(f"   > ollama serve")
+            print("   > ollama serve")
             print()
 
 
