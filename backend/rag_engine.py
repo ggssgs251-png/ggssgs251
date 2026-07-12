@@ -222,7 +222,7 @@ def query_documents(query: str, top_k: int = DEFAULT_RAG_RESULTS) -> list[dict[s
 
     retrieved = []
     if results["ids"] and results["ids"][0]:
-        for i, doc_id in enumerate(results["ids"][0]):
+        for i, _doc_id in enumerate(results["ids"][0]):
             distance = results["distances"][0][i] if results.get("distances") else 0.0
             score = 1.0 - distance  # convert distance to similarity score
             if score >= RAG_MIN_SCORE:

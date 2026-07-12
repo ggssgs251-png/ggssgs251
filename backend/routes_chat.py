@@ -160,7 +160,7 @@ def send_message(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Agent processing error: {str(e)}",
-        )
+        ) from e
 
 
 @router.post("/reset")

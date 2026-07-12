@@ -4,7 +4,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # --- Auth Schemas ---
 
 class RegisterRequest(BaseModel):

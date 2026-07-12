@@ -6,8 +6,8 @@ Scoring: threshold = 10. Items with weight < 10 alone will PASS (flagged but not
 
 # ruff: noqa: E402 — sys.path setup before application imports is intentional
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Ensure the data/logs directory exists before importing the guardrail
 _log_dir = Path(__file__).resolve().parent.parent.parent / "data" / "logs"

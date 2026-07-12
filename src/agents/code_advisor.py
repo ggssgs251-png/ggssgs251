@@ -8,7 +8,7 @@ from pathlib import Path
 from strands import Agent
 from strands.models.ollama import OllamaModel
 
-from src.tools import review_code_tool, explain_code_tool
+from src.tools import explain_code_tool, review_code_tool
 
 
 def _load_prompt() -> str:
